@@ -1,0 +1,59 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Freight Audit{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'reconciliation/app.css' %}">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="{% url 'dashboard' %}">
+      <span class="brand-mark">FA</span>
+      <span class="brand-text">Freight Audit</span>
+    </a>
+    {% if user.is_authenticated or demo_readonly %}
+    <nav class="nav">
+      <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}on{% endif %}">Overview</a>
+      <a href="{% url 'invoice_list' %}" class="{% if 'invoice' in request.resolver_match.url_name %}on{% endif %}">Invoices</a>
+      {% if not demo_readonly %}
+      <a href="{% url 'invoice_upload' %}">Upload</a>
+      <a href="/admin/">Rate cards</a>
+      {% endif %}
+    </nav>
+    {% if not demo_readonly %}
+    <form method="post" action="{% url 'logout' %}" class="logout">
+      {% csrf_token %}
+      <button type="submit">Sign out</button>
+    </form>
+    {% endif %}
+    {% endif %}
+  </div>
+</header>
+
+<main class="wrap main">
+  {% if demo_readonly %}
+    <div class="msg msg-info">
+      Read-only public demo running on generated sample data &mdash; no real
+      carrier pricing. Uploading and editing are disabled.
+    </div>
+  {% endif %}
+  {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+        <div class="msg msg-{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+
+<!-- jQuery is vendored rather than loaded from a CDN: the app runs on an
+     internal network, and a third-party outage should not break invoice
+     auditing. It also keeps the demo working offline. -->
+<script src="{% static 'reconciliation/jquery-3.7.1.min.js' %}"></script>
+<script src="{% static 'reconciliation/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

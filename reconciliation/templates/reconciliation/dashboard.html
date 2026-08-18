@@ -1,0 +1,117 @@
+{% extends "reconciliation/base.html" %}
+{% block title %}Overview · Freight Audit{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Recovery overview</h1>
+    <p class="subtitle">{{ invoice_count }} invoice{{ invoice_count|pluralize }} audited against {{ shipment_count }} shipment{{ shipment_count|pluralize }}.</p>
+  </div>
+  {% if not demo_readonly %}<a class="btn" href="{% url 'invoice_upload' %}">Upload invoice</a>{% endif %}
+</div>
+
+<div class="stat-row">
+  <div class="stat headline">
+    <div class="stat-label">Open recovery</div>
+    <div class="stat-value">₹{{ open_recovery|floatformat:2 }}</div>
+    <div class="stat-note">{{ open_count }} finding{{ open_count|pluralize }} not yet raised</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Billed by couriers</div>
+    <div class="stat-value">₹{{ total_billed|floatformat:2 }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Expected per contract</div>
+    <div class="stat-value">₹{{ total_expected|floatformat:2 }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total variance</div>
+    <div class="stat-value {% if total_variance > 0 %}over{% elif total_variance < 0 %}under{% endif %}">
+      {% if total_variance > 0 %}+{% endif %}₹{{ total_variance|floatformat:2 }}
+    </div>
+    <div class="stat-note">₹{{ recovered|floatformat:2 }} recovered to date</div>
+  </div>
+</div>
+
+<h2>Where the money leaks</h2>
+{% if by_kind %}
+<div class="table-scroll card">
+  <table>
+    <thead>
+      <tr><th>Finding</th><th class="num">Count</th><th class="num">Rupee impact</th></tr>
+    </thead>
+    <tbody>
+    {% for row in by_kind %}
+      <tr>
+        <td><span class="tag tag-{{ row.kind }}">{{ row.label }}</span></td>
+        <td class="num">{{ row.count }}</td>
+        <td class="num {% if row.impact > 0 %}over{% elif row.impact < 0 %}under{% endif %}">
+          {% if row.impact > 0 %}+{% endif %}₹{{ row.impact|floatformat:2 }}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">
+  <strong>No findings yet</strong>
+  Upload a courier invoice to start auditing.
+</div>
+{% endif %}
+
+<h2>By courier</h2>
+{% if by_courier %}
+<div class="table-scroll card">
+  <table>
+    <thead>
+      <tr>
+        <th>Courier</th><th class="num">Invoices</th>
+        <th class="num">Billed</th><th class="num">Under dispute</th><th class="num">Leakage rate</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for c in by_courier %}
+      <tr>
+        <td><strong>{{ c.name }}</strong> <span class="tag">{{ c.code }}</span></td>
+        <td class="num">{{ c.invoice_count }}</td>
+        <td class="num">₹{{ c.billed|floatformat:2 }}</td>
+        <td class="num {% if c.impact > 0 %}over{% endif %}">₹{{ c.impact|floatformat:2 }}</td>
+        <td class="num">
+          {% if c.billed %}{% widthratio c.impact c.billed 100 %}%{% else %}—{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty"><strong>No courier activity</strong>Seed demo data or upload an invoice.</div>
+{% endif %}
+
+<h2>Recent invoices</h2>
+{% if recent_invoices %}
+<div class="table-scroll card">
+  <table>
+    <thead>
+      <tr><th>Invoice</th><th>Courier</th><th>Period</th><th>Status</th><th class="num">Variance</th></tr>
+    </thead>
+    <tbody>
+    {% for inv in recent_invoices %}
+      <tr>
+        <td><a href="{% url 'invoice_detail' inv.pk %}" class="awb">{{ inv.invoice_number }}</a></td>
+        <td>{{ inv.courier.name }}</td>
+        <td>{{ inv.period_start|date:"d M" }} – {{ inv.period_end|date:"d M Y" }}</td>
+        <td><span class="tag tag-{{ inv.status }}">{{ inv.get_status_display }}</span></td>
+        <td class="num {% if inv.total_variance > 0 %}over{% elif inv.total_variance < 0 %}under{% endif %}">
+          {% if inv.total_variance > 0 %}+{% endif %}₹{{ inv.total_variance|floatformat:2 }}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty"><strong>No invoices yet</strong>Upload your first courier invoice to begin.</div>
+{% endif %}
+{% endblock %}

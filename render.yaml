@@ -1,0 +1,49 @@
+# Render blueprint. Create the service with:
+#   Render dashboard -> New -> Blueprint -> point at this repo
+#
+# Everything here is free-tier. The database is Render's free Postgres, which
+# expires 30 days after creation -- fine for a demo, see README for renewal.
+databases:
+  - name: courier-recon-db
+    databaseName: courier_recon
+    user: courier_recon
+    plan: free
+
+services:
+  - type: web
+    name: courier-recon
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      # Render generates a strong key and keeps it out of the repo.
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+
+      - key: DJANGO_DEBUG
+        value: "False"
+
+      # RENDER_EXTERNAL_HOSTNAME is injected by Render at runtime; settings.py
+      # appends it to ALLOWED_HOSTS so the host name never has to be hardcoded.
+      - key: DJANGO_ALLOWED_HOSTS
+        value: ""
+
+      - key: DATABASE_URL
+        fromDatabase:
+          name: courier-recon-db
+          property: connectionString
+
+      # Free tier gets 512 MB; three gunicorn workers is too many for that.
+      - key: WEB_CONCURRENCY
+        value: "2"
+
+      # Seed synthetic demo data on first boot. No login is created: the demo
+      # is public and read-only.
+      - key: SEED_DEMO
+        value: "true"
+
+      # Drops the login requirement and disables the write endpoints (upload,
+      # reconcile, status change) so an anonymous visitor cannot alter the data.
+      - key: DEMO_READONLY
+        value: "true"

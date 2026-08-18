@@ -1,0 +1,68 @@
+{% extends "reconciliation/base.html" %}
+{% block title %}Upload invoice · Freight Audit{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Upload invoice</h1>
+    <p class="subtitle">The file is imported and reconciled in one step.</p>
+  </div>
+</div>
+
+<div class="card card-pad form-narrow">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="msg msg-error">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="field">
+      <label for="{{ form.courier.id_for_label }}">Courier</label>
+      {{ form.courier }}
+      {% if form.courier.errors %}<div class="errors">{{ form.courier.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="field">
+      <label for="{{ form.invoice_number.id_for_label }}">Invoice number</label>
+      {{ form.invoice_number }}
+      {% if form.invoice_number.errors %}<div class="errors">{{ form.invoice_number.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label for="{{ form.period_start.id_for_label }}">Period start</label>
+        {{ form.period_start }}
+        {% if form.period_start.errors %}<div class="errors">{{ form.period_start.errors|striptags }}</div>{% endif %}
+      </div>
+      <div class="field">
+        <label for="{{ form.period_end.id_for_label }}">Period end</label>
+        {{ form.period_end }}
+        {% if form.period_end.errors %}<div class="errors">{{ form.period_end.errors|striptags }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="{{ form.invoice_date.id_for_label }}">Invoice date</label>
+      {{ form.invoice_date }}
+      {% if form.invoice_date.errors %}<div class="errors">{{ form.invoice_date.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="field">
+      <label for="{{ form.csv_file.id_for_label }}">Invoice CSV</label>
+      {{ form.csv_file }}
+      <div class="help">{{ form.csv_file.help_text }}</div>
+      {% if form.csv_file.errors %}<div class="errors">{{ form.csv_file.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <button type="submit" class="btn">Import and reconcile</button>
+  </form>
+</div>
+
+<h2>Expected file format</h2>
+<div class="card card-pad">
+  <p class="subtitle" style="margin-bottom:10px">Header names are matched loosely — <span class="awb">awb_no</span>, <span class="awb">waybill</span> and <span class="awb">tracking_id</span> all resolve to AWB.</p>
+  <pre class="awb" style="margin:0;overflow-x:auto">awb,zone,weight_kg,amount
+DLVRY100001,C,1.250,148.50
+DLVRY100002,B,0.480,92.00</pre>
+</div>
+{% endblock %}

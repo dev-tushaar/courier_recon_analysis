@@ -1,0 +1,125 @@
+{% extends "reconciliation/base.html" %}
+{% block title %}{{ invoice.invoice_number }} · Freight Audit{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>{{ invoice.invoice_number }}</h1>
+    <p class="subtitle">
+      {{ invoice.courier.name }} · billing {{ invoice.period_start|date:"d M Y" }} – {{ invoice.period_end|date:"d M Y" }}
+      · <span class="tag tag-{{ invoice.status }}">{{ invoice.get_status_display }}</span>
+    </p>
+  </div>
+  {% if not demo_readonly %}
+  <form method="post" action="{% url 'invoice_reconcile' invoice.pk %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-ghost">Re-run reconciliation</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="stat-row">
+  <div class="stat">
+    <div class="stat-label">Billed</div>
+    <div class="stat-value">₹{{ total_billed|floatformat:2 }}</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Expected</div>
+    <div class="stat-value">₹{{ total_expected|floatformat:2 }}</div>
+  </div>
+  <div class="stat headline">
+    <div class="stat-label">Variance</div>
+    <div class="stat-value">{% if total_variance > 0 %}+{% endif %}₹{{ total_variance|floatformat:2 }}</div>
+    <div class="stat-note">{{ discrepancies.count }} finding{{ discrepancies.count|pluralize }} on {{ lines.count }} line{{ lines.count|pluralize }}</div>
+  </div>
+</div>
+
+<h2>Findings</h2>
+
+<div class="filters">
+  <div class="field">
+    <label for="filter-kind">Type</label>
+    <select id="filter-kind">
+      <option value="">All types</option>
+      {% for value, label in kind_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="filter-status">Status</label>
+    <select id="filter-status">
+      <option value="">All statuses</option>
+      {% for value, label in status_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="filter-search">AWB</label>
+    <input type="text" id="filter-search" placeholder="Search AWB">
+  </div>
+  <div class="field">
+    <label for="filter-min">Min impact (₹)</label>
+    <input type="number" id="filter-min" placeholder="0" step="1">
+  </div>
+  <button type="button" class="btn btn-ghost btn-sm" id="filter-reset">Clear</button>
+  <div class="filter-count">
+    <span id="result-count">—</span> · <span id="result-total">—</span>
+  </div>
+</div>
+
+<div class="table-scroll card">
+  <table id="discrepancy-table"
+         data-endpoint="{% url 'api_discrepancies' invoice.pk %}"
+         data-status-endpoint="{% url 'api_update_discrepancy' 0 %}"
+         data-readonly="{% if demo_readonly %}true{% else %}false{% endif %}"
+         data-status-options='[{% for value, label in status_choices %}["{{ value }}","{{ label }}"]{% if not forloop.last %},{% endif %}{% endfor %}]'>
+    <thead>
+      <tr>
+        <th>AWB</th><th>Finding</th>
+        <th class="num">Billed</th><th class="num">Expected</th><th class="num">Impact</th>
+        <th>Explanation</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="7" class="empty">Loading findings…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>All invoice lines</h2>
+<div class="table-scroll card">
+  <table>
+    <thead>
+      <tr>
+        <th>AWB</th><th>Matched shipment</th>
+        <th class="num">Billed wt</th><th class="num">Our wt</th>
+        <th class="num">Billed</th><th class="num">Expected</th><th class="num">Variance</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for line in lines|slice:":200" %}
+      <tr>
+        <td class="awb">{{ line.awb }}</td>
+        <td>
+          {% if line.shipment %}
+            {{ line.shipment.order_ref }} · zone {{ line.shipment.zone }} · {{ line.shipment.get_status_display }}
+          {% else %}
+            <span class="tag tag-UNKNOWN_AWB">Unmatched</span>
+          {% endif %}
+        </td>
+        <td class="num">{{ line.billed_weight_kg }}</td>
+        <td class="num">{% if line.shipment %}{{ line.shipment.actual_weight_kg }}{% else %}—{% endif %}</td>
+        <td class="num">₹{{ line.billed_amount|floatformat:2 }}</td>
+        <td class="num">{% if line.expected_amount is not None %}₹{{ line.expected_amount|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td class="num {% if line.variance > 0 %}over{% elif line.variance < 0 %}under{% endif %}">
+          {% if line.variance is not None %}{% if line.variance > 0 %}+{% endif %}₹{{ line.variance|floatformat:2 }}{% else %}—{% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7" class="empty"><strong>No lines imported</strong>Upload a CSV for this invoice.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if lines.count > 200 %}
+<p class="subtitle" style="margin-top:10px">Showing the first 200 of {{ lines.count }} lines.</p>
+{% endif %}
+{% endblock %}

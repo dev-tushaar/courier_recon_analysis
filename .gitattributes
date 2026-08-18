@@ -1,0 +1,9 @@
+# Normalise to LF in the repository. Without this, a Windows checkout commits
+# CRLF into shell scripts and the Linux container fails with
+# "bad interpreter: /bin/sh^M" at startup.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
